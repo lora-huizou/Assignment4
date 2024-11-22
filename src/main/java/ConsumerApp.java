@@ -1,5 +1,7 @@
 import com.rabbitmq.client.ConnectionFactory;
 
+import db.PerformanceMonitor;
+import db.SkiResortDao;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -13,13 +15,14 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public class ConsumerApp {
-  private static final int NUM_WORKERS = 100; // number of consumer threads
-  private static final String SERVER = "34.213.239.60"; // rabbitmq elastic ip
+  private static final int NUM_WORKERS = 200; // number of consumer threads
+  private static final String SERVER = "54.190.212.169"; // rabbitmq elastic ip
   //private static final String SERVER = "localhost";
   private static final String QUEUE_NAME = "LiftRideQueue";
+  private static volatile boolean isShuttingDown = false;
 
   public static void main(String[] args) {
-    LiftRideStorage storage = new LiftRideStorage();
+    SkiResortDao skiResortDao = new SkiResortDao();
     ConnectionFactory factory = new ConnectionFactory();
     factory.setHost(SERVER);
     factory.setPort(5672);
@@ -30,31 +33,54 @@ public class ConsumerApp {
     List<ConsumerWorker> workers = new ArrayList<>();
     // Start worker threads in the ExecutorService
     for (int i = 0; i < NUM_WORKERS; i++) {
-      ConsumerWorker worker = new ConsumerWorker(QUEUE_NAME, storage, factory);
+      ConsumerWorker worker = new ConsumerWorker(QUEUE_NAME, skiResortDao, factory);
       workers.add(worker);
       executor.submit(worker);
     }
     // Add shutdown hook, ensure that all consumers complete their work and that resources are closed.
     Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-      log.info("Shutdown hook triggered. Shutting down executor and consumer workers.");
-      executor.shutdown();
-      // first shut down ExecutorService
-      try {
-        if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
-          log.info("Executor did not terminate in set time. Forcing shutdown.");
-          executor.shutdownNow();
-        }
-      } catch (InterruptedException e) {
-        executor.shutdownNow(); // Re-interrupt if current thread was interrupted
-        Thread.currentThread().interrupt();
-      }
-
-      // then close each worker's resources (channel & connection)
-      for (ConsumerWorker worker : workers) {
-        worker.close();
+      if (!isShuttingDown) {  // Prevent duplicate shutdown
+        isShuttingDown = true;
+        log.info("Shutdown signal received. Starting cleanup...");
+        shutdownExecutorAndWorkers(executor, workers, 5);
+        log.info("Final Statistics:");
+        PerformanceMonitor.getInstance().printStats();
       }
     }));
+    try {
+      while (!isShuttingDown) {
+        Thread.sleep(1000);
+      }
+    } catch (InterruptedException e) {
+      log.info("Main thread interrupted");
+    }
+  }
 
+  private static void shutdownExecutorAndWorkers(ExecutorService executor,
+      List<ConsumerWorker> workers, int timeoutMinutes) {
+    try {
+      log.info("Initiating shutdown with {} minute timeout...", timeoutMinutes);
+      executor.shutdown();
+
+      if (!executor.awaitTermination(timeoutMinutes, TimeUnit.MINUTES)) {
+        log.warn("Executor did not terminate within {} minutes. Forcing shutdown.",
+            timeoutMinutes);
+        executor.shutdownNow();
+      } else {
+        log.info("Executor terminated successfully");
+      }
+    } catch (InterruptedException e) {
+      log.error("Executor shutdown interrupted.", e);
+      executor.shutdownNow();
+      Thread.currentThread().interrupt();
+    }
+
+    // Close worker resources
+    log.info("Closing {} worker resources...", workers.size());
+    for (ConsumerWorker worker : workers) {
+      worker.close();
+    }
+    log.info("All workers closed successfully");
   }
 }
 

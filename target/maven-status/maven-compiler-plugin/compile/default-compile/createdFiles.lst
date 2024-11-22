@@ -1,0 +1,9 @@
+model/LiftRideEvent.class
+LiftRideStorage.class
+ConsumerApp.class
+model/LiftRide.class
+db/DynamoDBConnectionTest.class
+db/DynamoDBCircuitBreaker.class
+db/SkiResortDao.class
+ConsumerWorker.class
+db/PerformanceMonitor.class

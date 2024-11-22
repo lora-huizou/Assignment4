@@ -1,5 +1,9 @@
 /Users/huizou/Desktop/Northeastern/CS6650/Consumer/src/main/java/model/LiftRide.java
+/Users/huizou/Desktop/Northeastern/CS6650/Consumer/src/main/java/db/PerformanceMonitor.java
+/Users/huizou/Desktop/Northeastern/CS6650/Consumer/src/main/java/db/DynamoDBConnectionTest.java
 /Users/huizou/Desktop/Northeastern/CS6650/Consumer/src/main/java/ConsumerWorker.java
 /Users/huizou/Desktop/Northeastern/CS6650/Consumer/src/main/java/ConsumerApp.java
 /Users/huizou/Desktop/Northeastern/CS6650/Consumer/src/main/java/LiftRideStorage.java
+/Users/huizou/Desktop/Northeastern/CS6650/Consumer/src/main/java/db/SkiResortDao.java
+/Users/huizou/Desktop/Northeastern/CS6650/Consumer/src/main/java/db/DynamoDBCircuitBreaker.java
 /Users/huizou/Desktop/Northeastern/CS6650/Consumer/src/main/java/model/LiftRideEvent.java
