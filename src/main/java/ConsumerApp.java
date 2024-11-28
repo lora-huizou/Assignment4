@@ -1,7 +1,7 @@
 import com.rabbitmq.client.ConnectionFactory;
 
 import db.PerformanceMonitor;
-import db.SkiResortDao;
+import dao.SkiResortDao;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -18,16 +18,20 @@ public class ConsumerApp {
   private static final int NUM_WORKERS = 200; // number of consumer threads
   private static final String SERVER = "54.190.212.169"; // rabbitmq elastic ip
   //private static final String SERVER = "localhost";
+  private static final int PORT_NUM = 5672;
   private static final String QUEUE_NAME = "LiftRideQueue";
+  private static final String USER_NAME= "guest";
+  private static final String PASSWORD = "guest";
+
   private static volatile boolean isShuttingDown = false;
 
   public static void main(String[] args) {
     SkiResortDao skiResortDao = new SkiResortDao();
     ConnectionFactory factory = new ConnectionFactory();
     factory.setHost(SERVER);
-    factory.setPort(5672);
-    factory.setUsername("guest");
-    factory.setPassword("guest");
+    factory.setPort(PORT_NUM);
+    factory.setUsername(USER_NAME);
+    factory.setPassword(PASSWORD);
 
     ExecutorService executor = Executors.newFixedThreadPool(NUM_WORKERS);
     List<ConsumerWorker> workers = new ArrayList<>();

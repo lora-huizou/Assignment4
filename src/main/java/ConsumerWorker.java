@@ -4,7 +4,7 @@ import com.rabbitmq.client.*;
 
 
 import db.PerformanceMonitor;
-import db.SkiResortDao;
+import dao.SkiResortDao;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeoutException;

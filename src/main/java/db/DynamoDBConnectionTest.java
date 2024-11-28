@@ -31,10 +31,11 @@ public class DynamoDBConnectionTest {
       System.out.println("\nTest 3: Testing write operation...");
       Map<String, AttributeValue> item = new HashMap<>();
       item.put("skierID", AttributeValue.builder().s("TEST_SKIER1").build());
-      item.put("seasonID#dayID#time", AttributeValue.builder().s("2024#1#100").build());
+      item.put("resortID#seasonID#dayID#time", AttributeValue.builder().s("1#2024#1#100").build());
       item.put("resortId", AttributeValue.builder().n("1").build());
       item.put("liftId", AttributeValue.builder().n("1").build());
       item.put("vertical", AttributeValue.builder().n("10").build());
+
 
       PutItemRequest putRequest = PutItemRequest.builder()
           .tableName("SkiResortData")
@@ -50,7 +51,7 @@ public class DynamoDBConnectionTest {
           .tableName("SkiResortData")
           .key(Map.of(
               "skierID", AttributeValue.builder().s("TEST_SKIER1").build(),
-              "seasonID#dayID#time", AttributeValue.builder().s("2024#1#100").build()
+              "resortID#seasonID#dayID#time", AttributeValue.builder().s("1#2024#1#100").build()
           ))
           .build();
 
