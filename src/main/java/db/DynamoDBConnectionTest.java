@@ -30,7 +30,7 @@ public class DynamoDBConnectionTest {
       // Test 3: Try a Simple Write
       System.out.println("\nTest 3: Testing write operation...");
       Map<String, AttributeValue> item = new HashMap<>();
-      item.put("skierID", AttributeValue.builder().s("TEST_SKIER1").build());
+      item.put("skierID", AttributeValue.builder().n("1").build());
       item.put("resortID#seasonID#dayID#time", AttributeValue.builder().s("1#2024#1#100").build());
       item.put("resortId", AttributeValue.builder().n("1").build());
       item.put("liftId", AttributeValue.builder().n("1").build());
@@ -50,7 +50,7 @@ public class DynamoDBConnectionTest {
       GetItemRequest getRequest = GetItemRequest.builder()
           .tableName("SkiResortData")
           .key(Map.of(
-              "skierID", AttributeValue.builder().s("TEST_SKIER1").build(),
+              "skierID", AttributeValue.builder().n("1").build(),
               "resortID#seasonID#dayID#time", AttributeValue.builder().s("1#2024#1#100").build()
           ))
           .build();
