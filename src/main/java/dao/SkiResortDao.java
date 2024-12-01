@@ -22,6 +22,7 @@ import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
 import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
 import software.amazon.awssdk.services.dynamodb.model.WriteRequest;
 
+
 @Slf4j
 public class SkiResortDao {
   private final DynamoDbClient ddb;
@@ -192,11 +193,19 @@ public class SkiResortDao {
       final int shard = shardId;
       futures.add(executor.submit(() -> {
         String partitionKey = String.format("%d#%s#%d#%d", resortID, seasonID, dayID, shard);
+
+        Map<String, String> expressionAttributeNames = new HashMap<>();
+        expressionAttributeNames.put("#gsi1pk", GSI1_PARTITION_KEY); // "resortID#seasonID#dayID#shardID"
+
+        Map<String, AttributeValue> expressionAttributeValues = new HashMap<>();
+        expressionAttributeValues.put(":pk", AttributeValue.builder().s(partitionKey).build());
+
         QueryRequest queryRequest = QueryRequest.builder()
             .tableName(TABLE_NAME)
             .indexName(GSI1_NAME)
-            .keyConditionExpression(GSI1_PARTITION_KEY + " = :pk")
-            .expressionAttributeValues(Map.of(":pk", AttributeValue.builder().s(partitionKey).build()))
+            .keyConditionExpression("#gsi1pk = :pk")
+            .expressionAttributeNames(expressionAttributeNames)
+            .expressionAttributeValues(expressionAttributeValues)
             .projectionExpression(GSI1_SORT_KEY)
             .build();
         QueryResponse response = ddb.query(queryRequest);
@@ -226,13 +235,19 @@ public class SkiResortDao {
   public int getSkierDayVertical(int skierID, String seasonID, int dayID, int resortID) {
     String sortKeyPrefix = String.format("%d#%s#%d#", resortID, seasonID, dayID);
 
+    Map<String, String> expressionAttributeNames = new HashMap<>();
+    expressionAttributeNames.put("#partitionKey", PARTITION_KEY); // "skierID"
+    expressionAttributeNames.put("#sortKey", SORT_KEY); // "resortID#seasonID#dayID#time"
+
+    Map<String, AttributeValue> expressionAttributeValues = new HashMap<>();
+    expressionAttributeValues.put(":skierID", AttributeValue.builder().n(String.valueOf(skierID)).build());
+    expressionAttributeValues.put(":skPrefix", AttributeValue.builder().s(sortKeyPrefix).build());
+
     QueryRequest queryRequest = QueryRequest.builder()
         .tableName(TABLE_NAME)
-        .keyConditionExpression(PARTITION_KEY + " = :skierID AND begins_with(" + SORT_KEY + ", :skPrefix)")
-        .expressionAttributeValues(Map.of(
-            ":skierID", AttributeValue.builder().n(String.valueOf(skierID)).build(),
-            ":skPrefix", AttributeValue.builder().s(sortKeyPrefix).build()
-        ))
+        .keyConditionExpression("#partitionKey = :skierID AND begins_with(#sortKey, :skPrefix)")
+        .expressionAttributeNames(expressionAttributeNames)
+        .expressionAttributeValues(expressionAttributeValues)
         .projectionExpression("vertical")
         .build();
 
@@ -253,9 +268,14 @@ public class SkiResortDao {
       throw new IllegalArgumentException("Resort is a required parameter");
     }
 
+    Map<String, String> expressionAttributeNames = new HashMap<>();
+    expressionAttributeNames.put("#partitionKey", PARTITION_KEY); // "skierID"
+    expressionAttributeNames.put("#gsi3SortKey", GSI3_SORT_KEY); // "resortID#seasonID"
+
     Map<String, AttributeValue> expressionAttributeValues = new HashMap<>();
     expressionAttributeValues.put(":skierID", AttributeValue.builder().n(String.valueOf(skierID)).build());
-    String keyConditionExpression = PARTITION_KEY + " = :skierID";
+
+    String keyConditionExpression = "#partitionKey = :skierID";
 
     List<SkierVerticalResponse.SeasonVertical> seasonVerticals = new ArrayList<>();
 
@@ -263,12 +283,13 @@ public class SkiResortDao {
       // When season is specified
       String sortKey = resort + "#" + season;
       expressionAttributeValues.put(":sortKey", AttributeValue.builder().s(sortKey).build());
-      keyConditionExpression += " AND " + GSI3_SORT_KEY + " = :sortKey";
+      keyConditionExpression += " AND #gsi3SortKey = :sortKey";
 
       QueryRequest queryRequest = QueryRequest.builder()
           .tableName(TABLE_NAME)
           .indexName(GSI3_NAME)
           .keyConditionExpression(keyConditionExpression)
+          .expressionAttributeNames(expressionAttributeNames)
           .expressionAttributeValues(expressionAttributeValues)
           .projectionExpression("vertical, seasonID")
           .build();
@@ -285,12 +306,13 @@ public class SkiResortDao {
       // When season is not specified, aggregate total verticals per season
       String sortKeyPrefix = resort + "#";
       expressionAttributeValues.put(":sortKeyPrefix", AttributeValue.builder().s(sortKeyPrefix).build());
-      keyConditionExpression += " AND begins_with(" + GSI3_SORT_KEY + ", :sortKeyPrefix)";
+      keyConditionExpression += " AND begins_with(#gsi3SortKey, :sortKeyPrefix)";
 
       QueryRequest queryRequest = QueryRequest.builder()
           .tableName(TABLE_NAME)
           .indexName(GSI3_NAME)
           .keyConditionExpression(keyConditionExpression)
+          .expressionAttributeNames(expressionAttributeNames)
           .expressionAttributeValues(expressionAttributeValues)
           .projectionExpression("vertical, seasonID")
           .build();
